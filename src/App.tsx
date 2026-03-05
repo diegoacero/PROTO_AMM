@@ -41,6 +41,7 @@ interface BatchItem {
   data: string;
   mimeType: string;
   timestamp: number;
+  location?: { lat: number, lng: number };
 }
 
 // --- AI Service ---
@@ -160,13 +161,17 @@ export default function App() {
     if (!file || !currentAction) return;
 
     if (isBatchMode) {
-      const base64 = await fileToBase64(file);
+      const [base64, location] = await Promise.all([
+        fileToBase64(file),
+        getCurrentLocation()
+      ]);
       const newItem: BatchItem = {
         id: crypto.randomUUID(),
         type: currentAction,
         data: base64.split(',')[1],
         mimeType: file.type,
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        location
       };
       setBatchQueue(prev => [...prev, newItem]);
       e.target.value = '';
@@ -178,7 +183,10 @@ export default function App() {
     setLastResult(null);
 
     try {
-      const base64 = await fileToBase64(file);
+      const [base64, location] = await Promise.all([
+        fileToBase64(file),
+        getCurrentLocation()
+      ]);
       const mimeType = file.type;
       const data = base64.split(',')[1];
 
@@ -199,6 +207,11 @@ export default function App() {
 
       const resultText = response.text || "{}";
       const resultJson = JSON.parse(resultText);
+      
+      // Append location to the result
+      if (location) {
+        resultJson.gps_location = `${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}`;
+      }
       
       setLastResult(resultJson);
 
@@ -228,6 +241,20 @@ export default function App() {
     });
   };
 
+  const getCurrentLocation = (): Promise<{ lat: number, lng: number } | undefined> => {
+    return new Promise((resolve) => {
+      if (!navigator.geolocation) {
+        resolve(undefined);
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        () => resolve(undefined),
+        { timeout: 5000 }
+      );
+    });
+  };
+
   const processBatch = async () => {
     if (batchQueue.length === 0) return;
     setLoading(true);
@@ -250,6 +277,11 @@ export default function App() {
         });
 
         const resultJson = JSON.parse(response.text || "{}");
+        
+        // Append location to the result if it was captured
+        if (item.location) {
+          resultJson.gps_location = `${item.location.lat.toFixed(6)}, ${item.location.lng.toFixed(6)}`;
+        }
         
         // Save to DB
         await fetch('/api/records', {
