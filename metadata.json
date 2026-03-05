@@ -1,0 +1,8 @@
+{
+  "name": "AMM-AGRO",
+  "description": "AI-powered data extraction for industrial traceability from photos, audio, and documents.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
