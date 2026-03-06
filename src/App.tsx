@@ -114,7 +114,7 @@ export default function App() {
     }
   };
 
-  const handleLogin = async (e: React.FormEvent) => {
+  /*const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
@@ -135,8 +135,23 @@ export default function App() {
     } finally {
       setLoading(false);
     }
+  };*/
+const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    
+    // Bypass temporal para pruebas de doctorado
+    if (username === 'admin' && password === 'admin123') {
+      setTimeout(() => {
+        setUser({ id: 1, username: 'admin' });
+        setLoading(false);
+      }, 500);
+    } else {
+      setError("Usuario o contraseña incorrectos");
+      setLoading(false);
+    }
   };
-
   const handleLogout = () => {
     setUser(null);
     setLastResult(null);
